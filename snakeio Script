@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jogo da Cobrinha Hacker</title>
+  <style>
+    body {
+      background-color: #111;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    canvas {
+      border: 2px solid #0f0;
+      background-color: #000;
+    }
+    #infoBox {
+      display: none;
+      background-color: #222;
+      padding: 20px;
+      border: 2px solid red;
+      margin-top: 20px;
+      max-width: 400px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Jogo da Cobrinha Hacker</h1>
+  <canvas id="game" width="400" height="400"></canvas>
+  <div id="infoBox">
+    <h2>Você perdeu!</h2>
+    <p>Imagine se essas informações fossem expostas a um hacker:</p>
+    <ul>
+      <li><strong>Seu IP (simulado):</strong> <span id="ip">Carregando...</span></li>
+      <li><strong>Navegador:</strong> <span id="browser"></span></li>
+      <li><strong>Sistema:</strong> <span id="os"></span></li>
+      <li><strong>Localização (se permitido):</strong> <span id="location">Carregando...</span></li>
+    </ul>
+    <p><em>Proteja seus dados. Use VPN, cuidado com links e permissões!</em></p>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const box = 20;
+    const rows = canvas.height / box;
+    const cols = canvas.width / box;
+
+    let snake = [{ x: 9 * box, y: 10 * box }];
+    let direction = "RIGHT";
+    let food = {
+      x: Math.floor(Math.random() * cols) * box,
+      y: Math.floor(Math.random() * rows) * box,
+    };
+
+    document.addEventListener("keydown", dir);
+
+    function dir(e) {
+      if (e.key === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
+      if (e.key === "ArrowUp" && direction !== "DOWN") direction = "UP";
+      if (e.key === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
+      if (e.key === "ArrowDown" && direction !== "UP") direction = "DOWN";
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < snake.length; i++) {
+        ctx.fillStyle = i === 0 ? "lime" : "green";
+        ctx.fillRect(snake[i].x, snake[i].y, box, box);
+      }
+
+      ctx.fillStyle = "red";
+      ctx.fillRect(food.x, food.y, box, box);
+
+      let head = { x: snake[0].x, y: snake[0].y };
+
+      if (direction === "LEFT") head.x -= box;
+      if (direction === "UP") head.y -= box;
+      if (direction === "RIGHT") head.x += box;
+      if (direction === "DOWN") head.y += box;
+
+      // Game Over
+      if (
+        head.x < 0 ||
+        head.y < 0 ||
+        head.x >= canvas.width ||
+        head.y >= canvas.height ||
+        collision(head, snake)
+      ) {
+        clearInterval(game);
+        showInfo();
+        return;
+      }
+
+      snake.unshift(head);
+
+      if (head.x === food.x && head.y === food.y) {
+        food = {
+          x: Math.floor(Math.random() * cols) * box,
+          y: Math.floor(Math.random() * rows) * box,
+        };
+      } else {
+        snake.pop();
+      }
+    }
+
+    function collision(head, array) {
+      for (let i = 1; i < array.length; i++) {
+        if (head.x === array[i].x && head.y === array[i].y) return true;
+      }
+      return false;
+    }
+
+    let game = setInterval(draw, 100);
+
+    function showInfo() {
+      document.getElementById("infoBox").style.display = "block";
+      document.getElementById("browser").textContent = navigator.userAgent;
+      document.getElementById("os").textContent = navigator.platform;
+
+      // IP (simulado)
+      fetch("https://api.ipify.org?format=json")
+        .then((res) => res.json())
+        .then((data) => {
+          document.getElementById("ip").textContent = data.ip;
+        })
+        .catch(() => {
+          document.getElementById("ip").textContent = "Não foi possível obter.";
+        });
+
+      // Geolocalização
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            document.getElementById("location").textContent =
+              position.coords.latitude.toFixed(2) + ", " +
+              position.coords.longitude.toFixed(2);
+          },
+          () => {
+            document.getElementById("location").textContent = "Permissão negada.";
+          }
+        );
+      } else {
+        document.getElementById("location").textContent = "Não suportado.";
+      }
+    }
+  </script>
+</body>
+</html>
